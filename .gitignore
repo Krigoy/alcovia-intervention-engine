@@ -36,3 +36,4 @@ backend/pids/
 # Editor folders
 .vscode/
 .idea/
+alcovia-app/.env
