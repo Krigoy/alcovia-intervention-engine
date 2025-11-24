@@ -1,0 +1,38 @@
+# Node modules (frontend + backend)
+node_modules/
+**/node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Expo / React Native cache & build output
+alcovia-app/.expo/
+alcovia-app/.expo-shared/
+alcovia-app/dist/
+alcovia-app/web-build/
+alcovia-app/.next/
+alcovia-app/.turbo/
+alcovia-app/.metro-cache/
+alcovia-app/ios/
+alcovia-app/android/
+
+# Backend build outputs
+backend/dist/
+backend/build/
+backend/logs/
+backend/pids/
+
+# Editor folders
+.vscode/
+.idea/
