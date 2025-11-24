@@ -37,3 +37,4 @@ backend/pids/
 .vscode/
 .idea/
 alcovia-app/.env
+backend/.env
