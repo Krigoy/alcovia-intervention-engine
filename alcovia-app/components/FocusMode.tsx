@@ -22,9 +22,6 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
   const cheatReportedRef = useRef(false);
   const socketRef = useRef<Socket | null>(null);
 
-  // -------------------------------
-  // TIMER FIXED
-  // -------------------------------
   useEffect(() => {
     if (timerRunning) {
       timerRef.current = setInterval(() => {
@@ -39,9 +36,6 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
     };
   }, [timerRunning]);
 
-  // -------------------------------
-  // CHEAT DETECTION (React Native)
-  // -------------------------------
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active" && timerRunning && !cheatReportedRef.current) {
@@ -72,9 +66,6 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
     setMode("locked");
   }
 
-  // -------------------------------
-  // SOCKET.IO LISTENERS
-  // -------------------------------
   useEffect(() => {
     const socket = io(socketUrl, { transports: ["websocket"] });
     socketRef.current = socket;
@@ -84,7 +75,7 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
     });
 
     socket.on("student_locked", () => setMode("locked"));
-    socket.on("intervention_assigned", (payload) => {
+    socket.on("intervention_assigned", (payload: any) => {
       setMode("remedial");
       setTask(payload.task);
     });
@@ -93,12 +84,14 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
       setTask(null);
     });
 
-    return () => socket.disconnect();
-  }, []);
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [socketUrl, studentId]);
 
-  // -------------------------------
-  // SUBMIT QUIZ
-  // -------------------------------
   async function submitQuiz() {
     const payload = {
       student_id: studentId,
@@ -135,9 +128,6 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
     }
   }
 
-  // -------------------------------
-  // UI RENDERING
-  // -------------------------------
   if (mode === "locked") {
     return (
       <View style={{ padding: 20 }}>
@@ -181,7 +171,6 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
         />
       )}
 
-      {/* Quiz section */}
       <Text style={{ marginTop: 30, fontSize: 18 }}>Daily Quiz</Text>
 
       <TextInput

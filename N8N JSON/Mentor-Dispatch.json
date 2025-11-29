@@ -23,39 +23,39 @@
         "assignments": {
           "assignments": [
             {
-              "id": "ba04679e-7f4b-4e54-a6a1-580e342d6d9e",
+              "id": "a0b37262-e231-4da1-9bb5-98d423e1cdcb",
               "name": "student_id",
-              "value": "={{ $json[\"student_id\"] }}",
+              "value": "={{$json[\"body\"]?.student_id || $json[\"query\"]?.student_id || $json[\"student_id\"] || ''}}",
               "type": "string"
             },
             {
-              "id": "f840bb57-7a4c-47a3-8fa4-12533f2a57d3",
+              "id": "5d048ca8-62e3-4f34-9b6c-c630941bb74c",
               "name": "attempt_id",
-              "value": "={{ $json[\"attempt_id\"] || $json[\"id\"] || $json[\"attemptId\"] || '' }}\n",
+              "value": "={{$json[\"body\"]?.attempt_id || $json[\"query\"]?.attempt_id || $json[\"id\"] || ''}}",
               "type": "string"
             },
             {
-              "id": "a967517d-e527-4e40-9df3-f1ed0fe850de",
+              "id": "ee13cb66-f3a0-42e8-9dce-d5647546a18d",
               "name": "quiz_score",
-              "value": "={{ $json[\"quiz_score\"] }}",
-              "type": "number"
-            },
-            {
-              "id": "a30698a9-3171-49e5-8409-0db53673ed17",
-              "name": "focus_minutes",
-              "value": "={{ $json[\"focus_minutes\"] }}",
-              "type": "number"
-            },
-            {
-              "id": "642492c9-4e2c-43dd-8f12-272e69a9b0c1",
-              "name": "mentor_email",
-              "value": "={{ $json[\"mentor_email\"] || \"kanugoyal160@gmail.com\" }}\n",
+              "value": "={{$json[\"body\"]?.quiz_score || $json[\"query\"]?.quiz_score || $json[\"quiz_score\"] || ''}}",
               "type": "string"
             },
             {
-              "id": "0a902b10-f4c0-463e-9d34-e3de96297a12",
+              "id": "c781ec2a-e8fd-4d24-a177-cb056918aa7c",
+              "name": "focus_minutes",
+              "value": "={{$json[\"body\"]?.focus_minutes || $json[\"query\"]?.focus_minutes || $json[\"focus_minutes\"] || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "de864bae-eecf-4e39-afc2-497814e5ece8",
+              "name": "mentor_email",
+              "value": "={{$json[\"body\"]?.mentor_email || $json[\"query\"]?.mentor_email || $json[\"mentor_email\"] || 'mentor@local.test'}}",
+              "type": "string"
+            },
+            {
+              "id": "9bb387f2-169d-495f-a1fd-6aef9b1a794e",
               "name": "task",
-              "value": "={{ $json[\"task\"] || ($json[\"body\"] && $json[\"body\"][\"task\"]) || ($json[\"query\"] && $json[\"query\"][\"task\"]) || $json[\"textPlain\"] || $json[\"text\"] || \"Mentor to assign remedial task via the link.\" }}",
+              "value": "={{$json[\"body\"]?.task || $json[\"query\"]?.task || 'Remedial: follow-up'}}",
               "type": "string"
             }
           ]
@@ -75,8 +75,8 @@
       "parameters": {
         "fromEmail": "entizerrocks567@gmail.com",
         "toEmail": "kanugoyal160@gmail.com",
-        "subject": "=Student needs intervention – {{$json[\"student_id\"]}}",
-        "html": "=<h2>🚨 Intervention Required</h2>\n\n<p>A student has failed their daily check-in and needs your review.</p>\n\n<h3>Student information</h3>\n<ul>\n  <li><strong>Student ID:</strong> {{$json[\"student_id\"]}}</li>\n  <li><strong>Quiz Score:</strong> {{$json[\"quiz_score\"]}}</li>\n  <li><strong>Focus Minutes:</strong> {{$json[\"focus_minutes\"]}}</li>\n  <li><strong>Attempt ID:</strong> {{$json[\"attempt_id\"] || $json[\"id\"]}}</li>\n</ul>\n\n<h3>Next step (mentor)</h3>\n<p>You can assign <strong>any</strong> task — not just \"Read Chapter 4\". Click the button below to open the intervention assignment page and type the task you want.</p>\n\n<!-- The critical line: uses the run-specific resume URL -->\n<p>\n  <a href=\"{{$execution.resumeUrl}}?student_id={{$json[\"student_id\"]}}&attempt_id={{$json[\"attempt_id\"] || $json[\"id\"]}}\" \n     style=\"display:inline-block;padding:12px 18px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;\">\n    Assign Intervention Task\n  </a>\n</p>\n\n<p>If the button does not open, copy this link into your browser:</p>\n<p style=\"word-break:break-all;\">\n  {{$execution.resumeUrl}}?student_id={{$json[\"student_id\"]}}&attempt_id={{$json[\"attempt_id\"] || $json[\"id\"]}}\n</p>\n\n<hr>\n<p>— Intervention Engine — Alcovia</p>\n",
+        "subject": "=Student needs intervention — {{$json[\"student_id\"] || 'unknown'}}",
+        "html": "=<h2>Intervention Required</h2>\n<p>A student has failed their daily check-in and needs your review.</p>\n<h3>Student information</h3>\n<ul>\n  <li><strong>Student ID:</strong> {{$json[\"student_id\"] || 'unknown'}}</li>\n  <li><strong>Quiz Score:</strong> {{$json[\"quiz_score\"] || 'unknown'}}</li>\n  <li><strong>Focus Minutes:</strong> {{$json[\"focus_minutes\"] || 'unknown'}}</li>\n  <li><strong>Attempt ID:</strong> {{$json[\"attempt_id\"] || $json[\"id\"] || 'unknown'}}</li>\n</ul>\n<h3>Next step (mentor)</h3>\n<p>You can assign <strong>any</strong> task — click the button below to open the intervention assignment page and type the task you want.</p>\n<p>\n  <a href=\"{{ $execution.resumeUrl }}{{ $execution.resumeUrl.includes('?') ? '&' : '?' }}student_id={{ $json.student_id }}&attempt_id={{ $json.attempt_id }}&clicked=1\">Assign Intervention Task</a>\n</p>\n<p>If the button does not open, copy this link into your browser:</p>\n<p style=\"word-break:break-all;\">\n  {{$execution.resumeUrl}}?student_id={{$json.student_id}}&attempt_id={{$json.attempt_id}}&clicked=1\n</p>\n<hr>\n<p>— Intervention Engine — Alcovia</p>",
         "options": {}
       },
       "type": "n8n-nodes-base.emailSend",
@@ -97,27 +97,8 @@
     },
     {
       "parameters": {
-        "resume": "webhook",
-        "httpMethod": "POST",
-        "limitWaitTime": true,
-        "resumeAmount": 5,
-        "resumeUnit": "seconds",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        624,
-        0
-      ],
-      "id": "4b030457-0696-44aa-b1b7-c65f0853df73",
-      "name": "Wait",
-      "webhookId": "d6356db6-22a5-404f-bdfb-7860726fd5cc"
-    },
-    {
-      "parameters": {
         "method": "POST",
-        "url": "http://localhost:3000/assign-intervention",
+        "url": "https://artiodactylous-kari-amitotically.ngrok-free.dev/assign-intervention",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -133,13 +114,15 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"student_id\": \"={{ $json.student_id || $json.query.student_id || $json.body.student_id }}\",\n  \"attempt_id\": \"={{ $json.attempt_id || $json.query.attempt_id || $json.body.attempt_id }}\",\n  \"task\": \"={{ $json.body.task || $json.query.task || 'Remedial: follow-up' }}\",\n  \"mentor_id\": \"={{ $json.body.mentor_id || $json.query.mentor_id || $json.body.mentor_email || 'mentor@example.com' }}\"}\n",
-        "options": {}
+        "jsonBody": "={\n  \"student_id\": \"{{$node['Wait'].json?.query?.student_id || $json?.student_id || $json?.body?.student_id || ''}}\",\n  \"attempt_id\": \"{{$node['Wait'].json?.query?.attempt_id || $json?.attempt_id || $json?.body?.attempt_id || ''}}\",\n  \"task\": \"{{$json?.task || 'Remedial follow-up'}}\",\n  \"mentor_id\": \"{{$node['Edit Fields']?.json?.mentor_email || $json?.mentor_id || 'mentor@local.test'}}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        800,
+        832,
         0
       ],
       "id": "7a59d0b2-49f7-4d72-8339-a48bc23a859a",
@@ -147,14 +130,14 @@
     },
     {
       "parameters": {
-        "respondWith": "text",
-        "responseBody": "Workflow completed — mentor action recorded.\n",
+        "respondWith": "json",
+        "responseBody": "{\n  \"ok\": true,\n  \"reason\": \"mentor_assigned\",\n  \"student_id\": \"={{ $node['Wait'].json.query.student_id || $node['Wait'].json.body?.student_id || '' }}\",\n  \"attempt_id\": \"={{ $node['Wait'].json.query.attempt_id || $node['Wait'].json.body?.attempt_id || '' }}\",\n  \"message\": \"Mentor clicked the link; intervention assignment attempted.\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        976,
+        1056,
         0
       ],
       "id": "8076133a-bd3c-45f1-8691-f55461ad4a6b",
@@ -162,43 +145,22 @@
     },
     {
       "parameters": {
-        "path": "mentor-approve-form",
+        "resume": "webhook",
         "responseMode": "responseNode",
+        "limitWaitTime": true,
+        "resumeAmount": 12,
+        "resumeUnit": "seconds",
         "options": {}
       },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
       "position": [
-        432,
-        272
+        624,
+        0
       ],
-      "id": "728c2611-9533-41bd-b8d1-485036ee5326",
-      "name": "Webhook1",
-      "webhookId": "4b61a7db-7425-48ee-8a7f-e553528d9b0c"
-    },
-    {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "<!doctype html>\n<html>\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Assign Intervention Task</title>\n    <style>\n      body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;max-width:680px;margin:28px auto;padding:16px}\n      input,textarea{width:100%;padding:10px;margin:6px 0;border:1px solid #ddd;border-radius:6px}\n      button{background:#2563eb;color:#fff;padding:10px 14px;border-radius:8px;border:0}\n      .meta{color:#444;font-size:14px}\n    </style>\n  </head>\n  <body>\n    <h2>Assign Intervention</h2>\n    <p class=\"meta\">Student ID: <strong id=\"sid\"></strong><br/>Attempt ID: <strong id=\"aid\"></strong></p>\n\n    <form id=\"assign\" method=\"post\" action=\"\">\n      <input type=\"hidden\" name=\"student_id\" id=\"student_id\" />\n      <input type=\"hidden\" name=\"attempt_id\" id=\"attempt_id\" />\n      <label>Task (type anything the student should do)</label>\n      <textarea name=\"task\" id=\"task\" rows=\"4\" placeholder=\"e.g., Watch Chapter 2 video + practice set\"></textarea>\n      <div style=\"height:10px\"></div>\n      <button type=\"submit\">Assign Task</button>\n    </form>\n\n    <p style=\"margin-top:18px;color:#666\">If the button doesn’t work, copy-paste this URL into your browser to prefill the form:</p>\n    <pre id=\"raw\"></pre>\n\n    <script>\n      const params = new URLSearchParams(location.search);\n      const sid = params.get('student_id') || '';\n      const aid = params.get('attempt_id') || '';\n      document.getElementById('student_id').value = sid;\n      document.getElementById('attempt_id').value = aid;\n      document.getElementById('sid').innerText = sid || '(not supplied)';\n      document.getElementById('aid').innerText = aid || '(not supplied)';\n      document.getElementById('raw').innerText = location.href;\n      document.getElementById('assign').action = location.pathname + location.search;\n    </script>\n\n    <hr />\n  </body>\n</html>\n",
-        "options": {
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "text/html"
-              }
-            ]
-          }
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        640,
-        272
-      ],
-      "id": "b7f02a9e-2aac-4669-b0d6-a984e5a68bad",
-      "name": "Respond to Webhook1"
+      "id": "d3ba9310-3880-4ed8-83a5-20c32a4c5e5c",
+      "name": "Wait",
+      "webhookId": "523a0756-c375-4f9e-bca1-4ac5b71fe0f5"
     }
   ],
   "pinData": {},
@@ -236,17 +198,6 @@
         ]
       ]
     },
-    "Wait": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "HTTP Request": {
       "main": [
         [
@@ -263,11 +214,11 @@
         []
       ]
     },
-    "Webhook1": {
+    "Wait": {
       "main": [
         [
           {
-            "node": "Respond to Webhook1",
+            "node": "HTTP Request",
             "type": "main",
             "index": 0
           }
@@ -281,7 +232,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "1371f1f1-ea9e-4081-bec6-5dc2e59abbad",
+  "versionId": "550b81e1-eb48-4e39-b19b-13fdd8b2e21e",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "cc39d691ca9567e0dbb96bd463910a9f68db6d382a12a8a51c9866c9360286a3"

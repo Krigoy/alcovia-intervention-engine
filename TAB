@@ -1,0 +1,5 @@
+encryptionKey = "G3gZ8tQGnFzgRfKPDNB7F9siNI51lG8o"
+
+[database]
+type = sqlite
+sqlite.databaseFile = "/Users/infurnia/.n8n/database.sqlite"

@@ -12,7 +12,6 @@ import {
   Platform,
 } from "react-native";
 import { useAuth, useUser } from "@clerk/clerk-expo";
-import { useRouter } from "expo-router";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
@@ -22,9 +21,8 @@ if (supabaseUrl && supabaseAnonKey)
   supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function Dashboard() {
-  const router = useRouter();
-  const { isSignedIn } = useAuth?.() ?? { isSignedIn: false };
-  const { user } = useUser?.() ?? { user: undefined };
+  const { isSignedIn, isLoaded: authLoaded } = useAuth() as any;
+  const { user } = useUser() as any;
 
   const [loading, setLoading] = useState<boolean>(true);
   const [students, setStudents] = useState<any[]>([]);
@@ -32,19 +30,22 @@ export default function Dashboard() {
   const [interventions, setInterventions] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  // New check-in form state
   const [formStudentId, setFormStudentId] = useState("");
   const [formQuiz, setFormQuiz] = useState("");
   const [formFocus, setFormFocus] = useState("");
   const [submittingCheckin, setSubmittingCheckin] = useState(false);
 
   useEffect(() => {
-    if (!isSignedIn) {
-      router.replace("/login");
-      return;
+    if (!authLoaded) return;
+    if (isSignedIn) {
+      fetchAll();
+    } else {
+      setStudents([]);
+      setRecentLogs([]);
+      setInterventions([]);
+      setLoading(false);
     }
-    fetchAll();
-  }, [isSignedIn]);
+  }, [authLoaded, isSignedIn]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -63,10 +64,7 @@ export default function Dashboard() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(500);
-    if (error) {
-      console.error(error);
-      return;
-    }
+    if (error) return;
     setStudents(data || []);
   };
 
@@ -77,10 +75,7 @@ export default function Dashboard() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(200);
-    if (error) {
-      console.error(error);
-      return;
-    }
+    if (error) return;
     setRecentLogs(data || []);
   };
 
@@ -91,10 +86,7 @@ export default function Dashboard() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(200);
-    if (error) {
-      console.error(error);
-      return;
-    }
+    if (error) return;
     setInterventions(data || []);
   };
 
@@ -148,7 +140,6 @@ export default function Dashboard() {
       );
       if (!res.ok) {
         const text = await res.text();
-        console.error("checkin failed", res.status, text);
         Alert.alert("Submit failed", `status ${res.status}: ${text}`);
       } else {
         const json = await res.json();
@@ -160,7 +151,6 @@ export default function Dashboard() {
         await fetchStudents();
       }
     } catch (err) {
-      console.error("submit error", err);
       Alert.alert("Error", "Unable to submit check-in");
     } finally {
       setSubmittingCheckin(false);
@@ -193,7 +183,10 @@ export default function Dashboard() {
               `${backendBase.replace(/\/$/, "")}/assign-intervention`,
               {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-n8n-secret": process.env.N8N_SECRET || "",
+                },
                 body: JSON.stringify(payload),
               }
             );
@@ -205,7 +198,6 @@ export default function Dashboard() {
               await fetchAll();
             }
           } catch (err) {
-            console.error(err);
             Alert.alert("Error", "Failed to assign");
           } finally {
             setRefreshing(false);
@@ -236,7 +228,6 @@ export default function Dashboard() {
           </Text>
         </View>
 
-        {/* NEW: Check-in Form */}
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Add New Daily Check-In</Text>
 
@@ -309,7 +300,7 @@ export default function Dashboard() {
           <Text style={{ padding: 12 }}>No recent logs.</Text>
         ) : (
           recentLogs.map((log) => (
-            <View key={log.attempt_id} style={styles.tableRow}>
+            <View key={log.attempt_id ?? log.id} style={styles.tableRow}>
               <Text style={[styles.col, styles.colId]}>{log.student_id}</Text>
               <Text style={[styles.col]}>{log.status}</Text>
               <Text style={[styles.col]}>{String(log.quiz_score)}</Text>
@@ -363,26 +354,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: { fontSize: 20, fontWeight: "800" },
-  headerRight: { flexDirection: "row", alignItems: "center" },
-
-  outlineBtn: {
-    borderWidth: 1,
-    borderColor: "#999",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  outlineBtnText: { color: "#333", fontWeight: "600" },
-
-  primaryBtn: {
-    backgroundColor: "#0A84FF",
-    padding: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  primaryBtnText: { color: "#fff", fontWeight: "700" },
-
   formCard: {
     backgroundColor: "#F7FBFF",
     padding: 12,
@@ -398,7 +369,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
-
   summaryRow: { flexDirection: "row", marginTop: 16 },
   summaryCard: {
     flex: 1,
@@ -409,9 +379,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: { fontSize: 13, color: "#666" },
   summaryValue: { fontSize: 22, fontWeight: "800", marginTop: 6 },
-
   sectionTitle: { marginTop: 18, fontSize: 16, fontWeight: "700" },
-
   tableHeader: {
     flexDirection: "row",
     marginTop: 12,
@@ -426,11 +394,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#fafafa",
     alignItems: "center",
   },
-
   col: { flex: 1, fontSize: 13 },
   colId: { flex: 1.6 },
   colAction: { flex: 1.4, alignItems: "flex-end" },
-
   assignBtn: {
     backgroundColor: "#EF4444",
     paddingVertical: 6,
@@ -438,13 +404,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   assignBtnText: { color: "#fff", fontWeight: "700" },
-
   interventionRow: {
     padding: 12,
     backgroundColor: "#FBFBFB",
     marginTop: 8,
     borderRadius: 8,
   },
-
-  footer: { marginTop: 20 },
+  primaryBtn: {
+    backgroundColor: "#2563EB",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  primaryBtnText: { color: "#fff", fontWeight: "700" },
 });

@@ -1,113 +1,129 @@
 import React from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
-  TouchableOpacity,
+  ActivityIndicator,
   StyleSheet,
+  Platform,
+  TouchableOpacity,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
+import Dashboard from "./dashboard";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 
-export default function LandingPage() {
-  const router = useRouter();
-  const { isSignedIn } = useAuth();
+const hostedSignInUrl = (
+  process.env.EXPO_PUBLIC_CLERK_SIGNIN_URL || ""
+).toString();
+
+export default function Index() {
+  const { isSignedIn, isLoaded } = useAuth() as any;
+
+  async function openHostedSignIn() {
+    if (!hostedSignInUrl) {
+      console.warn("Hosted sign-in URL not set: EXPO_PUBLIC_CLERK_SIGNIN_URL");
+      return;
+    }
+    try {
+      const redirectUrl = Linking.createURL("/callback");
+      await WebBrowser.openAuthSessionAsync(hostedSignInUrl, redirectUrl);
+    } catch (err) {
+      console.warn("Auth open failed", err);
+    }
+  }
+
+  if (!isLoaded) {
+    return (
+      <SafeAreaView style={s.center}>
+        <ActivityIndicator />
+      </SafeAreaView>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <ScrollView contentContainerStyle={s.container}>
+        <View style={s.navbar}>
+          <Text style={s.logo}>Intervention Engine</Text>
+          <View style={s.navRight}>
+            <TouchableOpacity onPress={openHostedSignIn} style={s.navButton}>
+              <Text style={s.navButtonText}>Get Started</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={s.hero}>
+          <Text style={s.heroTitle}>Student Intervention Engine Prototype</Text>
+          <Text style={s.heroSubtitle}>
+            Automatically analyze daily student data, detect Focus Score issues,
+            and trigger mentor interventions in real-time.
+          </Text>
+
+          <TouchableOpacity onPress={openHostedSignIn} style={s.ctaBtn}>
+            <Text style={s.ctaBtnText}>Get Started</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={s.features}>
+          <Text style={s.sectionTitle}>What This Prototype Includes</Text>
+
+          <View style={s.featureCard}>
+            <Text style={s.featureTitle}>Daily Check-In Parsing</Text>
+            <Text style={s.featureDesc}>
+              Reads daily student logs, evaluates Focus Score, and assigns
+              status.
+            </Text>
+          </View>
+
+          <View style={s.featureCard}>
+            <Text style={s.featureTitle}>Automatic Alerts</Text>
+            <Text style={s.featureDesc}>
+              Triggers n8n workflows when a student needs intervention.
+            </Text>
+          </View>
+
+          <View style={s.featureCard}>
+            <Text style={s.featureTitle}>Mentor Dashboard</Text>
+            <Text style={s.featureDesc}>
+              View all student statuses and assign remedial tasks instantly.
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    );
+  }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.navbar}>
-        <Text style={styles.logo}>Intervention Engine</Text>
-
-        <View style={styles.navRight}>
-          {!isSignedIn && (
-            <>
-              <TouchableOpacity onPress={() => router.push("/login")}>
-                <Text style={styles.navLink}>Login</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push("/signup")}
-                style={styles.navButton}
-              >
-                <Text style={styles.navButtonText}>Sign Up</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {isSignedIn && (
-            <>
-              <TouchableOpacity
-                onPress={() => router.push("/dashboard")}
-                style={styles.navButton}
-              >
-                <Text style={styles.navButtonText}>Dashboard</Text>
-              </TouchableOpacity>
-
-              <View style={{ width: 10 }} />
-
-              <TouchableOpacity
-                onPress={() => router.push("/focus")}
-                style={[styles.navButton, { backgroundColor: "#34C759" }]}
-              >
-                <Text style={styles.navButtonText}>Focus Mode</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
+    <SafeAreaView style={s.wrap}>
+      <View style={s.main}>
+        <Dashboard />
       </View>
-
-      <View style={styles.hero}>
-        <Text style={styles.heroTitle}>
-          Student Intervention Engine Prototype
-        </Text>
-
-        <Text style={styles.heroSubtitle}>
-          Automatically analyze daily student data, detect Focus Score issues,
-          and trigger mentor interventions in real-time.
-        </Text>
-
-        <TouchableOpacity
-          style={styles.ctaBtn}
-          onPress={() =>
-            isSignedIn ? router.push("/dashboard") : router.push("/signup")
-          }
-        >
-          <Text style={styles.ctaBtnText}>
-            {isSignedIn ? "Go to Dashboard" : "Get Started"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.features}>
-        <Text style={styles.sectionTitle}>What This Prototype Includes</Text>
-
-        <View style={styles.featureCard}>
-          <Text style={styles.featureTitle}>Daily Check-In Parsing</Text>
-          <Text style={styles.featureDesc}>
-            Reads daily student logs, evaluates Focus Score, and assigns status.
-          </Text>
-        </View>
-
-        <View style={styles.featureCard}>
-          <Text style={styles.featureTitle}>Automatic Alerts</Text>
-          <Text style={styles.featureDesc}>
-            Triggers n8n workflows when a student needs intervention.
-          </Text>
-        </View>
-
-        <View style={styles.featureCard}>
-          <Text style={styles.featureTitle}>Mentor Dashboard</Text>
-          <Text style={styles.featureDesc}>
-            View all student statuses and assign remedial tasks instantly.
-          </Text>
-        </View>
-      </View>
-
-      <View style={{ height: 40 }} />
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    backgroundColor: "#fff",
+  },
+  wrap: {
+    flex: 1,
+    flexDirection: Platform.OS === "web" ? "row" : "column",
+    backgroundColor: "#fff",
+  },
+  main: {
+    flex: 1,
+    minHeight: 0,
+  },
+
   container: {
     paddingTop: 30,
     paddingBottom: 60,
@@ -128,11 +144,6 @@ const styles = StyleSheet.create({
   navRight: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  navLink: {
-    marginRight: 20,
-    fontSize: 15,
-    color: "#333",
   },
   navButton: {
     backgroundColor: "#0A84FF",
@@ -160,7 +171,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#555",
     textAlign: "center",
-    maxWidth: 320,
+    maxWidth: 520,
     marginBottom: 22,
   },
   ctaBtn: {
