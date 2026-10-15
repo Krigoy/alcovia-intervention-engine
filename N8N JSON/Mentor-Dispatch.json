@@ -98,7 +98,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://artiodactylous-kari-amitotically.ngrok-free.dev/assign-intervention",
+        "url": "https://YOUR-BACKEND-URL/assign-intervention",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -108,7 +108,7 @@
             },
             {
               "name": "x-n8n-secret",
-              "value": "d842b2ac18e9f086e3b45f5ec0ffa449a78f2bbce9be8ec3"
+              "value": "REPLACE_WITH_YOUR_N8N_SECRET"
             }
           ]
         },

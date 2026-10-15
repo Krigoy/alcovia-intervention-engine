@@ -38,3 +38,5 @@ backend/pids/
 .idea/
 alcovia-app/.env
 backend/.env
+
+!.env.example
