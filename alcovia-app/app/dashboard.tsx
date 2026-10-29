@@ -21,7 +21,7 @@ if (supabaseUrl && supabaseAnonKey)
   supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function Dashboard() {
-  const { isSignedIn, isLoaded: authLoaded } = useAuth() as any;
+  const { isSignedIn, isLoaded: authLoaded, getToken } = useAuth() as any;
   const { user } = useUser() as any;
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -170,9 +170,15 @@ export default function Dashboard() {
         onPress: async () => {
           setRefreshing(true);
           try {
+            const token =
+              typeof getToken === "function" ? await getToken() : null;
+            if (!token) {
+              Alert.alert("Sign in required", "Please sign in to assign.");
+              return;
+            }
             const payload = {
               student_id,
-              attempt_id,
+              attempt_id: attempt_id || null,
               task: "Remedial reading: review chapters 1-2",
               mentor_id:
                 user?.primaryEmailAddress?.emailAddress ||
@@ -185,7 +191,7 @@ export default function Dashboard() {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "x-n8n-secret": process.env.N8N_SECRET || "",
+                  Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify(payload),
               }

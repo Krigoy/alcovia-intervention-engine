@@ -2,12 +2,18 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS students (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  clerk_user_id text,
   name text,
   status text,
   current_intervention_id uuid,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
+
+-- clerk_user_id maps a Clerk user to a student row. The ALTER also migrates
+-- databases created before the column existed; safe to re-run.
+ALTER TABLE students ADD COLUMN IF NOT EXISTS clerk_user_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_students_clerk_user_id ON students(clerk_user_id);
 
 CREATE TABLE IF NOT EXISTS daily_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -37,6 +43,7 @@ CREATE TABLE IF NOT EXISTS interventions (
 
 CREATE INDEX IF NOT EXISTS idx_interventions_student_id ON interventions(student_id);
 CREATE INDEX IF NOT EXISTS idx_interventions_attempt_id ON interventions(attempt_id);
+CREATE INDEX IF NOT EXISTS idx_interventions_mentor_id ON interventions(lower(mentor_id));
 
 DO $$
 BEGIN

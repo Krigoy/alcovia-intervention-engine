@@ -8,9 +8,15 @@ interface Props {
   studentId: string;
   apiBase: string;
   socketUrl: string;
+  getToken?: () => Promise<string | null>;
 }
 
-export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
+export default function FocusMode({
+  studentId,
+  apiBase,
+  socketUrl,
+  getToken,
+}: Props) {
   const [mode, setMode] = useState<Mode>("normal");
   const [task, setTask] = useState<string | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -18,9 +24,16 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
   const [quizAnswer, setQuizAnswer] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [interventionId, setInterventionId] = useState<string | null>(null);
+
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const secondsRef = useRef(0);
   const cheatReportedRef = useRef(false);
   const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    secondsRef.current = seconds;
+  }, [seconds]);
 
   useEffect(() => {
     if (timerRunning) {
@@ -46,24 +59,47 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
     return () => subscription.remove();
   }, [timerRunning]);
 
+  async function authHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    try {
+      const token = getToken ? await getToken() : null;
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch (e) {
+      console.warn("getToken failed", e);
+    }
+    return headers;
+  }
+
   async function reportCheat() {
     cheatReportedRef.current = true;
     setTimerRunning(false);
-    setMessage("Cheating detected — locked.");
 
     const payload = {
       student_id: studentId,
       quiz_score: 0,
-      focus_minutes: Math.floor(seconds / 60),
+      focus_minutes: Math.floor(secondsRef.current / 60),
     };
 
-    await fetch(`${apiBase}/daily-checkin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    setMode("locked");
+    try {
+      const res = await fetch(`${apiBase}/daily-checkin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        cheatReportedRef.current = false;
+        setMessage(`Left the app during a session, but the report failed (status ${res.status}).`);
+        return;
+      }
+      setMessage("Cheating detected — locked.");
+      setMode("locked");
+    } catch (e) {
+      console.warn("reportCheat failed", e);
+      cheatReportedRef.current = false;
+      setMessage("Left the app during a session, but the server could not be reached.");
+    }
   }
 
   useEffect(() => {
@@ -77,11 +113,14 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
     socket.on("student_locked", () => setMode("locked"));
     socket.on("intervention_assigned", (payload: any) => {
       setMode("remedial");
-      setTask(payload.task);
+      setTask(payload?.task ?? null);
+      setInterventionId(payload?.id ?? null);
     });
     socket.on("intervention_completed", () => {
       setMode("normal");
       setTask(null);
+      setInterventionId(null);
+      setMessage("Back on track.");
     });
 
     return () => {
@@ -93,38 +132,72 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
   }, [socketUrl, studentId]);
 
   async function submitQuiz() {
+    const score = Number(quizAnswer);
+    if (quizAnswer.trim() === "" || !Number.isInteger(score) || score < 0 || score > 10) {
+      setMessage("Enter a whole-number quiz score between 0 and 10.");
+      return;
+    }
+
     const payload = {
       student_id: studentId,
-      quiz_score: Number(quizAnswer),
-      focus_minutes: Math.floor(seconds / 60),
+      quiz_score: score,
+      focus_minutes: Math.floor(secondsRef.current / 60),
     };
 
-    const res = await fetch(`${apiBase}/daily-checkin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const res = await fetch(`${apiBase}/daily-checkin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    const json = await res.json();
+      if (!res.ok) {
+        const txt = await res.text();
+        setMessage(`Check-in failed (status ${res.status}): ${txt}`);
+        return;
+      }
 
-    if (json.status === "On Track") {
-      setMessage("You're on track!");
-    } else {
-      setMode("locked");
-      setMessage("Pending Mentor Review — locked.");
+      const json = await res.json();
+
+      if (json.student_status === "Remedial") {
+        setMessage("Check-in saved. Finish your remedial task to get back on track.");
+      } else if (json.status === "On Track") {
+        setMessage("You're on track!");
+      } else if (json.status === "Needs Intervention") {
+        setMode("locked");
+        setMessage("Pending Mentor Review — locked.");
+      } else {
+        setMessage("Unexpected response from server.");
+      }
+    } catch (e) {
+      console.warn("submitQuiz failed", e);
+      setMessage("Could not reach the server. Please try again.");
     }
   }
 
   async function markComplete() {
-    const res = await fetch(`${apiBase}/complete-intervention`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ student_id: studentId }),
-    });
+    try {
+      const res = await fetch(`${apiBase}/complete-intervention`, {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({
+          student_id: studentId,
+          intervention_id: interventionId ?? undefined,
+        }),
+      });
 
-    if (res.ok) {
-      setMode("normal");
-      setTask(null);
+      if (res.ok) {
+        setMode("normal");
+        setTask(null);
+        setInterventionId(null);
+        setMessage("Back on track.");
+      } else {
+        const txt = await res.text();
+        setMessage(`Could not mark complete (status ${res.status}): ${txt}`);
+      }
+    } catch (e) {
+      console.warn("markComplete failed", e);
+      setMessage("Could not reach the server. Please try again.");
     }
   }
 
@@ -148,6 +221,7 @@ export default function FocusMode({ studentId, apiBase, socketUrl }: Props) {
         <Text style={{ fontSize: 20, fontWeight: "600" }}>Remedial Task</Text>
         <Text style={{ marginTop: 10 }}>{task}</Text>
         <Button title="Mark Complete" onPress={markComplete} />
+        {message && <Text style={{ marginTop: 20 }}>{message}</Text>}
       </View>
     );
   }

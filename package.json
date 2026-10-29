@@ -1,6 +1,7 @@
 {
-  "dependencies": {
-    "lucide-react": "^0.555.0",
-    "react-native-svg": "^15.15.0"
+  "private": true,
+  "scripts": {
+    "backend": "npm --prefix backend start",
+    "app": "npm --prefix alcovia-app start"
   }
 }

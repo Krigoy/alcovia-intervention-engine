@@ -17,7 +17,12 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 WebBrowser.maybeCompleteAuthSession();
 
 export default function AssignIntervention() {
-  const { isLoaded: authLoaded, isSignedIn, signOut } = useAuth() as any;
+  const {
+    isLoaded: authLoaded,
+    isSignedIn,
+    signOut,
+    getToken,
+  } = useAuth() as any;
   const { user, isLoaded: userLoaded } = useUser() as any;
   const router = useRouter();
   const params = useLocalSearchParams() as {
@@ -31,10 +36,9 @@ export default function AssignIntervention() {
   const [hostedSignInUrl] = useState(
     process.env.EXPO_PUBLIC_CLERK_SIGNIN_URL || ""
   );
-  const backendBase = (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(
-    /\/$/,
-    ""
-  );
+  const backendBase = (
+    process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:3000"
+  ).replace(/\/$/, "");
 
   useEffect(() => {
     if (!authLoaded || !userLoaded) return;
@@ -85,7 +89,7 @@ export default function AssignIntervention() {
     if (
       params.mentor_email &&
       currentEmail &&
-      params.mentor_email !== currentEmail
+      params.mentor_email.toLowerCase() !== currentEmail.toLowerCase()
     ) {
       Alert.alert(
         "Wrong account",
@@ -110,22 +114,27 @@ export default function AssignIntervention() {
         task: task.trim(),
         mentor_id: getUserEmail() || null,
       };
+      const token =
+        typeof getToken === "function" ? await getToken() : null;
+      if (!token) {
+        Alert.alert(
+          "Session expired",
+          "Could not get a sign-in token. Please sign in again."
+        );
+        return;
+      }
       const res = await fetch(`${backendBase}/assign-intervention`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
       const txt = await res.text();
       if (!res.ok) {
         Alert.alert("Assign failed", txt || `status ${res.status}`);
-        setBusy(false);
         return;
-      }
-      let json;
-      try {
-        json = JSON.parse(txt);
-      } catch {
-        json = { ok: true };
       }
       Alert.alert("Assigned", "Intervention assigned");
       router.push("/tasks");
