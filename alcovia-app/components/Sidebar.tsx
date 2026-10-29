@@ -9,14 +9,13 @@ import {
   Modal,
   TouchableOpacity,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 
 const items = [
   { key: "dashboard", label: "Dashboard", route: "/dashboard", icon: "📊" },
   { key: "focus", label: "Focus Timer", route: "/focus", icon: "⏱️" },
   { key: "tasks", label: "Tasks", route: "/tasks", icon: "📝" },
-  { key: "profile", label: "Profile", route: "/profile", icon: "👤" },
 ];
 
 export default function Sidebar({
@@ -47,7 +46,7 @@ export default function Sidebar({
     }).start();
     setCollapsed(!collapsed);
   };
-  const go = (r: string) => router.push(r);
+  const go = (r: string) => router.push(r as Href);
   const doSignOut = async () => {
     try {
       if (isLoaded && typeof signOut === "function") await signOut();

@@ -23,9 +23,13 @@ const supabase =
 const BACKEND = (
   process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:3000"
 ).replace(/\/$/, "");
+const SOCKET_URL = (process.env.EXPO_PUBLIC_SOCKET_URL ?? BACKEND).replace(
+  /\/$/,
+  ""
+);
 
 export default function Tasks() {
-  const { isLoaded, isSignedIn } = useAuth() as any;
+  const { isLoaded, isSignedIn, getToken } = useAuth() as any;
   const { user } = useUser() as any;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,10 +50,23 @@ export default function Tasks() {
     }
   }, [isLoaded, isSignedIn]);
 
+  const authHeaders = async (): Promise<Record<string, string>> => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    try {
+      const token =
+        typeof getToken === "function" ? await getToken() : null;
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch (err) {
+      console.warn("getToken failed", err);
+    }
+    return headers;
+  };
+
   useEffect(() => {
     if (!mentorEmail) return;
-    if (!process.env.EXPO_PUBLIC_BACKEND_URL) return;
-    const socket = io(BACKEND, { transports: ["websocket"] });
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -126,7 +143,7 @@ export default function Tasks() {
             mentorEmail
           )}`
         : `${BACKEND}/api/interventions`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: await authHeaders() });
       if (!res.ok) {
         console.warn("backend fetch failed", res.status);
         setTasks([]);
@@ -147,12 +164,12 @@ export default function Tasks() {
     setRefreshing(false);
   };
 
-  const markComplete = async (student_id: string) => {
+  const markComplete = async (student_id: string, intervention_id?: string) => {
     try {
       const res = await fetch(`${BACKEND}/complete-intervention`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id }),
+        headers: await authHeaders(),
+        body: JSON.stringify({ student_id, intervention_id }),
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -213,7 +230,10 @@ export default function Tasks() {
               onPress={() => {
                 Alert.alert("Confirm", "Mark this intervention complete?", [
                   { text: "Cancel", style: "cancel" },
-                  { text: "Yes", onPress: () => markComplete(item.student_id) },
+                  {
+                    text: "Yes",
+                    onPress: () => markComplete(item.student_id, item.id),
+                  },
                 ]);
               }}
               style={({ pressed }) => [
